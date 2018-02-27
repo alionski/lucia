@@ -1,0 +1,67 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="se.mah.sensorteknik.aliona.lucia.MainFragment">
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:rowCount="2"
+        android:columnCount="2">
+
+        <ImageButton
+            android:id="@+id/button_proximity_sensor"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_column="0"
+            android:layout_columnWeight="1"
+            android:layout_row="0"
+            android:layout_rowWeight="1"
+            android:background="@color/red"
+            android:scaleType="fitCenter"
+            android:padding="16dp"
+            android:src="@drawable/ic_my_location_black_48dp" />
+
+        <ImageButton
+            android:id="@+id/button_led_actuators"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_column="1"
+            android:layout_columnWeight="1"
+            android:layout_row="0"
+            android:layout_rowWeight="1"
+            android:background="@color/blue"
+            android:scaleType="fitCenter"
+            android:padding="16dp"
+            android:src="@drawable/ic_lightbulb_outline_black_48dp" />
+
+        <ImageButton
+            android:id="@+id/button_information"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_column="0"
+            android:layout_columnWeight="1"
+            android:layout_row="1"
+            android:layout_rowWeight="1"
+            android:background="@color/green"
+            android:scaleType="fitCenter"
+            android:padding="16dp"
+            android:src="@drawable/ic_info_outline_black_48dp" />
+
+        <ImageButton
+            android:id="@+id/button_text_to_speech"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_column="1"
+            android:layout_columnWeight="1"
+            android:layout_row="1"
+            android:layout_rowWeight="1"
+            android:background="@color/yellow"
+            android:scaleType="fitCenter"
+            android:padding="16dp"
+            android:src="@drawable/ic_volume_up_black_48dp" />
+
+    </GridLayout>
+
+</FrameLayout>
