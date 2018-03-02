@@ -52,6 +52,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
 //                finish();
             }
             // Automatically connects to the device upon successful start-up initialization.
+            Log.i(TAG, "Starting connection");
             mBluetoothLeService.connect(mDeviceAddress);
         }
 
@@ -91,11 +92,15 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         mScanCallback = new ScanCallback() {
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
+                Log.i(TAG, "On scan result");
                 super.onScanResult(callbackType, result);
-                mDeviceAddress = result.getDevice().getAddress();
-                startService(result.getDevice().getAddress());
-                Log.i("DEVICE", callbackType + " " + result);
-                Log.i("ADDRESS", result.getDevice().getAddress());
+                if (("Lucia").equals(result.getScanRecord().getDeviceName())) {
+                    mDeviceAddress = result.getDevice().getAddress();
+                    startService(result.getDevice().getAddress());
+                    Log.i("DEVICE", callbackType + " " + result);
+                    Log.i("LUCIA FOUND, ADDRESS", result.getDevice().getAddress());
+                    mBLEScanner.stopScan(mScanCallback);
+                }
             }
         };
 
@@ -107,7 +112,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         } else {
             if (ContextCompat.checkSelfPermission(mActivity,
                     Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-
                 startScan();
             } else {
                 ActivityCompat.requestPermissions(mActivity, new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
@@ -118,20 +122,25 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
 
     private void startService(String address) {
         if (mBluetoothLeService != null) {
+            Log.i(TAG, "Connecting to device");
             mBluetoothLeService.connect(address);
+        } else {
+            Log.i(TAG, "Service is null FAILURE");
         }
     }
 
     public void startScan() {
+
+        Log.i(TAG, "Starting scan");
 
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .setReportDelay(1)
                 .build();
 
-        ScanFilter scanFilter = new ScanFilter.Builder()
-                .setServiceUuid(ParcelUuid.fromString(GattAttributes.PROXIMITY_UUID)).build();
-        mBLEScanner.startScan(Arrays.asList(scanFilter), settings, mScanCallback);
+//        ScanFilter scanFilter = new ScanFilter.Builder()
+//                .setServiceUuid(ParcelUuid.fromString(GattAttributes.PROXIMITY_UUID)).build();
+        mBLEScanner.startScan(mScanCallback);
     }
 
     public boolean isBluetoothAdapterEnabled() {
@@ -139,7 +148,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     public void disconnect() {
-//        mActivity.unbindService(mServiceConnection);
-//        mBluetoothLeService = null;
+        mActivity.unbindService(mServiceConnection);
+        mBluetoothLeService = null;
     }
 }
