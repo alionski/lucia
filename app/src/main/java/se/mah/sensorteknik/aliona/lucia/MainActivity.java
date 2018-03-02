@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
     private void initUI() {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();
-        MainFragment mainFrag = MainFragment.newInstance("", "");
+        MainFragment mainFrag = MainFragment.newInstance();
         transaction.add(R.id.fragment_container, mainFrag, null);
         transaction.commit();
     }
