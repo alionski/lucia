@@ -8,7 +8,6 @@ import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.net.Uri;
 import android.os.Handler;
-import android.os.Looper;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
@@ -63,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
             public void run() {
                 toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
                 try {
-                    Thread.sleep(interval);   
+                    Thread.sleep(interval);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
