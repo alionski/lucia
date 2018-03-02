@@ -34,7 +34,7 @@ public class ArduinoService extends Service {
     private static final UUID DESCRIPTOR_CONFIG_UUID = UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
 
     private final UUID PROXIMITY_SERVICE_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
-    private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
+    private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     public final static String ACTION_GATT_CONNECTED =
             "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
@@ -94,10 +94,16 @@ public class ArduinoService extends Service {
                 gatt.setCharacteristicNotification(characteristic, true);
 
                 // Write on the config descriptor to be notified when the value changes
-                BluetoothGattDescriptor descriptor =
-                        characteristic.getDescriptor(DESCRIPTOR_CONFIG_UUID);
-                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                gatt.writeDescriptor(descriptor);
+                for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
+                    if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
+                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        gatt.writeDescriptor(descriptor);
+                    }
+                }
+//                BluetoothGattDescriptor descriptor =
+//                        characteristic.getDescriptors();
+//                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+//
 
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -144,32 +150,12 @@ public class ArduinoService extends Service {
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
 
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
-        if (PROXIMITY_CHARACTERISTICS_UUID.equals(characteristic.getUuid())) {
-            int flag = characteristic.getProperties();
-            int format = -1;
-            if ((flag & 0x01) != 0) {
-                format = BluetoothGattCharacteristic.FORMAT_UINT16;
-                Log.d(TAG, "Proximity format UINT16.");
-            } else {
-                format = BluetoothGattCharacteristic.FORMAT_UINT8;
-                Log.d(TAG, "Proximity format UINT8.");
-            }
-            final int proximity = characteristic.getIntValue(format, 1);
-            Log.d(TAG, String.format("Received proximity update: %d", proximity));
-            intent.putExtra(EXTRA_DATA, String.valueOf(proximity));
-        } else {
-            // For all other profiles, writes the data formatted in HEX.
-            final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
-                    stringBuilder.append(String.format("%02X ", byteChar));
-                Log.d(TAG, "Received extra data: " + stringBuilder.toString());
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
-            }
+        final byte[] data = characteristic.getValue();
+        if (data != null && data.length > 0) {
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for(byte byteChar : data)
+                stringBuilder.append(String.format("%02X ", byteChar));
+            Log.d(TAG, "Received extra data: " + stringBuilder.toString());
         }
         sendBroadcast(intent);
     }

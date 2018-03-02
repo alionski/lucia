@@ -9,7 +9,8 @@ public class GattAttributes {
 
     private static HashMap<String, String> attributes = new HashMap();
     public static String PROXIMITY_UUID = "d68b43f7-dbdf-4496-badb-0c59f8e7a5ac";
-    public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
+    public static String PROXIMITY_CHARACTERISTICS_UUID = "250416ca-a580-4a39-959d-32bdab46403b";
+    public static String CLIENT_CHARACTERISTIC_CONFIG = "250416ca-a580-4a39-959d-32bdab46403b";
 
     static {
         // Sample Services.
