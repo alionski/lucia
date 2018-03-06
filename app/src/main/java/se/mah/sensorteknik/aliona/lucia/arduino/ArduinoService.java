@@ -23,6 +23,9 @@ import java.util.UUID;
 
 /**
  * Created by aliona on 2018-02-27.
+ * http://nilhcem.com/android-things/bluetooth-low-energy
+ * https://github.com/googlesamples/android-BluetoothLeGatt/blob/master/Application/src/main/java/com/example/android/bluetoothlegatt/BluetoothLeService.java
+ *
  */
 
 public class ArduinoService extends Service {
