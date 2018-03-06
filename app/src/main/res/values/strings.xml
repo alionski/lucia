@@ -2,7 +2,11 @@
     <string name="app_name">Lucia</string>
     <string name="service_description">BLE service for communication with Arduino</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="ble_not_supported">BLE not supported</string>
+    <string name="proximity_description">This button will enable the distance sensor. %1$s</string>
+    <string name="led_description">This button will turn on the lights on the stick. %1$s</string>
+    <string name="beep_description">This button will turn on the beeping feedback from the sensor. %1$s</string>
+    <string name="information_description">This button will take you to an information screen.</string>
+    <string name="function_on">This function is currently on.</string>
+    <string name="function_off">This function is currently off.</string>
 </resources>
