@@ -9,6 +9,8 @@
 
     <ImageButton
         android:id="@+id/button_proximity_sensor"
+        android:contentDescription="@string/proximity_description"
+        android:focusable="true"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_column="0"
@@ -22,6 +24,8 @@
 
     <ImageButton
         android:id="@+id/button_led_actuators"
+        android:contentDescription="@string/led_description"
+        android:focusable="true"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_column="1"
@@ -35,6 +39,8 @@
 
     <ImageButton
         android:id="@+id/button_information"
+        android:contentDescription="@string/information_description"
+        android:focusable="true"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_column="0"
@@ -48,6 +54,8 @@
 
     <ImageButton
         android:id="@+id/button_text_to_speech"
+        android:contentDescription="@string/beep_description"
+        android:focusable="true"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_column="1"

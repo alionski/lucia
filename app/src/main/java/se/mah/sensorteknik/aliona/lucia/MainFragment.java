@@ -18,12 +18,16 @@ import android.widget.ImageButton;
  * create an instance of this fragment.
  */
 public class MainFragment extends Fragment implements View.OnClickListener{
-    private ImageButton mProximityButton, mLEDButton, mInfoButton, mSpeechButton;
+    private ImageButton mProximityButton, mLEDButton, mInfoButton, mBeepButton;
     private OnFragmentInteractionListener mListener;
 
     public static final int TOGGLE_LEDS = 0;
     public static final int TOGGLE_DISTANCE_SENSOR = 1;
     public static final int TOGGLE_BEEPING = 2;
+
+    private boolean ledOn = false;
+    private boolean proximityOn = false;
+    private boolean beepingOn = false;
 
     /**
      * Constructor. Required to be empty.
@@ -51,12 +55,15 @@ public class MainFragment extends Fragment implements View.OnClickListener{
 
     private void initUI(View view) {
         mProximityButton = view.findViewById(R.id.button_proximity_sensor);
+        mProximityButton.setContentDescription(getString(R.string.proximity_description, getString(R.string.function_off)));
         mLEDButton = view.findViewById(R.id.button_led_actuators);
+        mLEDButton.setContentDescription(getString(R.string.led_description, getString(R.string.function_off)));
         mInfoButton = view.findViewById(R.id.button_information);
-        mSpeechButton = view.findViewById(R.id.button_text_to_speech);
+        mBeepButton = view.findViewById(R.id.button_text_to_speech);
+        mBeepButton.setContentDescription(getString(R.string.beep_description, getString(R.string.function_off)));
         mProximityButton.setOnClickListener(this);
         mLEDButton.setOnClickListener(this);
-        mSpeechButton.setOnClickListener(this);
+        mBeepButton.setOnClickListener(this);
         mInfoButton.setOnClickListener(this);
     }
 
@@ -85,10 +92,31 @@ public class MainFragment extends Fragment implements View.OnClickListener{
                 break;
             case R.id.button_led_actuators:
                 mListener.onFragmentInteraction(TOGGLE_LEDS);
+                if(!ledOn) {
+                    mLEDButton.setContentDescription(getString(R.string.led_description, getString(R.string.function_on)));
+                    ledOn = true;
+                } else {
+                    mLEDButton.setContentDescription(getString(R.string.led_description, getString(R.string.function_off)));
+                    ledOn = false;
+                }
                 break;
             case R.id.button_proximity_sensor:
+                if(!proximityOn) {
+                    mProximityButton.setContentDescription(getString(R.string.proximity_description, getString(R.string.function_on)));
+                    proximityOn = true;
+                } else {
+                    mProximityButton.setContentDescription(getString(R.string.proximity_description, getString(R.string.function_off)));
+                    proximityOn = false;
+                }
                 break;
             case R.id.button_text_to_speech:
+                if(!beepingOn) {
+                    mBeepButton.setContentDescription(getString(R.string.beep_description, getString(R.string.function_on)));
+                    beepingOn = true;
+                } else {
+                    mBeepButton.setContentDescription(getString(R.string.beep_description, getString(R.string.function_off)));
+                    beepingOn = false;
+                }
                 break;
         }
     }
