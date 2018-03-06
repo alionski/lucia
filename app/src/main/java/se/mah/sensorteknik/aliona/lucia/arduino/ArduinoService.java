@@ -22,6 +22,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -37,10 +38,11 @@ public class ArduinoService extends Service {
     // https://www.bluetooth.com/specifications/gatt/descriptors
     // org.bluetooth.descriptor.gatt.client_characteristic_configuration
     // TODO: UODATE VALUE, THIS IS NOT OUR DESCRIPTOR
-    private static final UUID DESCRIPTOR_CONFIG_UUID = UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
+    private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
 
-    private final UUID PROXIMITY_SERVICE_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
+    private final UUID SERVICE_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
     private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
+    private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHATACTERISTICS_UUID);
     public final static String ACTION_GATT_CONNECTED =
             "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
@@ -61,12 +63,15 @@ public class ArduinoService extends Service {
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
     private int mConnectionState = STATE_DISCONNECTED;
+    private Handler handler = new Handler();
+    private ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
+
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
 
-    private boolean beeping;
+    private boolean beeping = false;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -94,25 +99,20 @@ public class ArduinoService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
 
-                BluetoothGattCharacteristic characteristic = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                BluetoothGattCharacteristic characteristicProximity = gatt
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
 
                 // Enable notifications for this characteristic locally
-                gatt.setCharacteristicNotification(characteristic, true);
+                gatt.setCharacteristicNotification(characteristicProximity, true);
 
                 // Write on the config descriptor to be notified when the value changes
-                for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
+                for (BluetoothGattDescriptor descriptor : characteristicProximity.getDescriptors()) {
                     if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
                         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                         gatt.writeDescriptor(descriptor);
                     }
                 }
-//                BluetoothGattDescriptor descriptor =
-//                        characteristic.getDescriptors();
-//                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-//
-
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
@@ -121,9 +121,9 @@ public class ArduinoService extends Service {
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt,
                                       BluetoothGattDescriptor descriptor, int status) {
-            if (DESCRIPTOR_CONFIG_UUID.equals(descriptor.getUuid())) {
+            if (DESCRIPTOR_PROXIMITY_UUID.equals(descriptor.getUuid())) {
                 BluetoothGattCharacteristic characteristic = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
                 gatt.readCharacteristic(characteristic);
             }
@@ -135,7 +135,6 @@ public class ArduinoService extends Service {
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // TODO: only one of these?
-                readCharacteristic(characteristic);
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }
@@ -158,11 +157,15 @@ public class ArduinoService extends Service {
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
         final byte[] data = characteristic.getValue();
+        final int dataInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
         if (data != null && data.length > 0) {
             final StringBuilder stringBuilder = new StringBuilder(data.length);
             for(byte byteChar : data)
                 stringBuilder.append(String.format("%02X ", byteChar));
             Log.d(TAG, "Received extra data: " + stringBuilder.toString());
+            Log.d(TAG, "Int value:" + dataInt);
+
+            playProximityBeep(dataInt);
         }
         sendBroadcast(intent);
     }
@@ -216,6 +219,14 @@ public class ArduinoService extends Service {
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;
         return true;
+    }
+
+    public void ledsOnOff(boolean isOn) {
+        if (isOn) {
+            writeLEDCharacteristic(1);
+        } else {
+            writeLEDCharacteristic(0);
+        }
     }
 
     public class LocalBinder extends Binder {
@@ -280,6 +291,28 @@ public class ArduinoService extends Service {
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
+    private void writeLEDCharacteristic(int onOff) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        /*check if the service is available on the device*/
+        BluetoothGattService mCustomService = mBluetoothGatt.getService(SERVICE_UUID);
+        if(mCustomService == null){
+            Log.w(TAG, "Service not found");
+            return;
+        }
+        /*get the read characteristic from the service*/
+        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(LED_CHARACTERISTICS_UUID);
+        mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
+        boolean success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
+        if(!success){
+            Log.w(TAG, "Failed to write characteristic");
+        } else {
+            Log.w(TAG, "SUCCESS to write characteristic");
+        }
+    }
+
     /**
      * Retrieves a list of supported GATT services on the connected device. This should be
      * invoked only after {@code BluetoothGatt#discoverServices()} completes successfully.
@@ -300,21 +333,20 @@ public class ArduinoService extends Service {
      */
     private void playProximityBeep(int distance) {
         if(!beeping) {
-            final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
-            final long interval = distance * 2;
-            Handler handler = new Handler();
-            handler.post(new Runnable() {
-                public void run() {
-                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-                    try {
-                        Thread.sleep(interval);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-//                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-                }
-            });
-            beeping = false;
+            final long interval = distance * 10;
+//            handler.post(new Runnable() {
+//                public void run() {
+//                    Log.d(TAG, "Beeping");
+//                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+//                    try {
+//                        Thread.sleep(interval);
+//                        beeping = false;
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+////                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+//                }
+//            });
         }
     }
 }
