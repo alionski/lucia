@@ -91,6 +91,15 @@ public class MainActivity extends AppCompatActivity implements
         transaction.commit();
     }
 
+    /**
+     * Displays the fragment containing information about the application's functionality.
+     * Added to back stack for easy backwards navigation.
+     */
+    public void showInfoFragment() {
+        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container,
+                InformationFragment.newInstance(), "infoFrag").addToBackStack(null).commit();
+    }
+
     private void doBindService() {
         bindService(new Intent(MainActivity.this, SensorService.class),
                 sensorServiceConnection, Context.BIND_AUTO_CREATE);

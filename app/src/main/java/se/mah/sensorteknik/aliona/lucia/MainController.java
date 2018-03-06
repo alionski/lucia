@@ -77,6 +77,9 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
             case MainFragment.TOGGLE_DISTANCE_SENSOR:
 
                 break;
+            case MainFragment.SHOW_INFO_FRAG:
+                mActivity.showInfoFragment();
+                break;
         }
     }
 
