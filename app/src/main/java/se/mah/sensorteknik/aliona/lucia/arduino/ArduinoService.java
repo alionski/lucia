@@ -14,7 +14,10 @@ import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -59,6 +62,8 @@ public class ArduinoService extends Service {
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
+
+    private boolean beeping;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -149,7 +154,6 @@ public class ArduinoService extends Service {
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
-
         final byte[] data = characteristic.getValue();
         if (data != null && data.length > 0) {
             final StringBuilder stringBuilder = new StringBuilder(data.length);
@@ -161,10 +165,7 @@ public class ArduinoService extends Service {
     }
 
 
-
     public boolean initialize() {
-        // For API level 18 and above, get a reference to BluetoothAdapter through
-        // BluetoothManager.
         if (mBluetoothManager == null) {
             mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (mBluetoothManager == null) {
@@ -286,5 +287,31 @@ public class ArduinoService extends Service {
         if (mBluetoothGatt == null) return null;
 
         return mBluetoothGatt.getServices();
+    }
+
+    /**
+     * Plays a sound representing some proximity detected by the BLE device.
+     * Plays a beep as long as one is already not playing, or the thread is
+     * sleeping. The distance input determines the sleep after the beep.
+     * @param distance Distance value from sensor
+     */
+    private void playProximityBeep(int distance) {
+        if(!beeping) {
+            final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
+            final long interval = distance * 2;
+            Handler handler = new Handler();
+            handler.post(new Runnable() {
+                public void run() {
+                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+                    try {
+                        Thread.sleep(interval);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+//                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+                }
+            });
+            beeping = false;
+        }
     }
 }

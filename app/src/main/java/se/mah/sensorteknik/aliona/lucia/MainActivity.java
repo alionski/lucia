@@ -6,10 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.media.AudioManager;
-import android.media.ToneGenerator;
-import android.net.Uri;
-import android.os.Handler;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -79,10 +75,18 @@ public class MainActivity extends AppCompatActivity implements
         unregisterReceiver(bleDeviceReceiver);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mController.disconnect();
+        doUnbindService();
+    }
+
     private void initUI() {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();
         MainFragment mainFrag = MainFragment.newInstance();
+        mainFrag.setListener(mController);
         transaction.add(R.id.fragment_container, mainFrag, null);
         transaction.commit();
     }
@@ -102,30 +106,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void onFragmentInteraction(Uri uri) {
+    public void onFragmentInteraction(int command) {
 
-    }
-
-    //TODO: Move to Service when possible
-    /**
-     * Plays a sound representing some proximity detected by the BLE device.
-     * @param distance Distance value from sensor
-     */
-    private void playProximityBeep(int distance) {
-        final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
-        final long interval = distance * 2;
-        Handler handler = new Handler();
-        handler.post(new Runnable() {
-            public void run() {
-                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-                try {
-                    Thread.sleep(interval);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-            }
-        });
     }
 
     /**
@@ -179,18 +161,11 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Check which request we're responding to
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == RESULT_OK) {
                 mController.startScan();
             }
         }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        mController.disconnect();
     }
 
     @Override

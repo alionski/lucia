@@ -1,7 +1,6 @@
 package se.mah.sensorteknik.aliona.lucia;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -20,6 +19,10 @@ import android.widget.ImageButton;
 public class MainFragment extends Fragment implements View.OnClickListener{
     private ImageButton mProximityButton, mLEDButton, mInfoButton, mSpeechButton;
     private OnFragmentInteractionListener mListener;
+
+    public static final int TOGGLE_LEDS = 0;
+    public static final int TOGGLE_DISTANCE_SENSOR = 1;
+    public static final int TOGGLE_BEEPING = 2;
 
     /**
      * Constructor. Required to be empty.
@@ -59,12 +62,12 @@ public class MainFragment extends Fragment implements View.OnClickListener{
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
+//        if (context instanceof OnFragmentInteractionListener) {
+//            mListener = (OnFragmentInteractionListener) context;
+//        } else {
+//            throw new RuntimeException(context.toString()
+//                    + " must implement OnFragmentInteractionListener");
+//        }
     }
 
     @Override
@@ -80,12 +83,17 @@ public class MainFragment extends Fragment implements View.OnClickListener{
             case R.id.button_information:
                 break;
             case R.id.button_led_actuators:
+                mListener.onFragmentInteraction(TOGGLE_LEDS);
                 break;
             case R.id.button_proximity_sensor:
                 break;
             case R.id.button_text_to_speech:
                 break;
         }
+    }
+
+    public void setListener(OnFragmentInteractionListener fragmentInteractionListener) {
+        this.mListener = fragmentInteractionListener;
     }
 
     /**
@@ -100,6 +108,6 @@ public class MainFragment extends Fragment implements View.OnClickListener{
      */
     public interface OnFragmentInteractionListener {
         // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+        void onFragmentInteraction(int command);
     }
 }
