@@ -42,6 +42,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     private BluetoothLeScanner mBLEScanner;
     private ScanCallback mScanCallback;
     private MainActivity mActivity;
+    private boolean ledsOn = false;
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
         @Override
@@ -64,14 +65,29 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
 
 
     @Override
-    public void onFragmentInteraction(Uri uri) {
+    public void onFragmentInteraction(int command) {
+        switch (command) {
+            case MainFragment.TOGGLE_LEDS:
+                if(ledsOn) {
+                    ledsOn = false;
+                    //Unregister sensor listener?
+                } else {
+                    ledsOn = true;
+                    //Register sensor listener?
+                }
+                break;
+            case MainFragment.TOGGLE_BEEPING:
 
+                break;
+            case MainFragment.TOGGLE_DISTANCE_SENSOR:
+
+                break;
+        }
     }
 
     public MainController(MainActivity activity) {
         mActivity = activity;
         initBluetooth();
-
         Intent gattServiceIntent = new Intent(mActivity, ArduinoService.class);
         mActivity.bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
     }
@@ -84,7 +100,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
             mActivity.finish();
         }
 
-        // Initializes Bluetooth adapter.
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) mActivity.getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
