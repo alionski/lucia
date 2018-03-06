@@ -68,13 +68,8 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     public void onFragmentInteraction(int command) {
         switch (command) {
             case MainFragment.TOGGLE_LEDS:
-                if(ledsOn) {
-                    ledsOn = false;
-                    //Unregister sensor listener?
-                } else {
-                    ledsOn = true;
-                    //Register sensor listener?
-                }
+                ledsOn = !ledsOn;
+                mBluetoothLeService.ledsOnOff(ledsOn);
                 break;
             case MainFragment.TOGGLE_BEEPING:
 
