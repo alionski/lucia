@@ -103,11 +103,23 @@ public class ArduinoService extends Service {
                         .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
 
+                BluetoothGattCharacteristic characteristicLED = gatt
+                        .getService(SERVICE_UUID)
+                        .getCharacteristic(LED_CHARACTERISTICS_UUID);
+
                 // Enable notifications for this characteristic locally
                 gatt.setCharacteristicNotification(characteristicProximity, true);
+                gatt.setCharacteristicNotification(characteristicLED, true);
 
                 // Write on the config descriptor to be notified when the value changes
                 for (BluetoothGattDescriptor descriptor : characteristicProximity.getDescriptors()) {
+                    if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
+                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        gatt.writeDescriptor(descriptor);
+                    }
+                }
+
+                for (BluetoothGattDescriptor descriptor : characteristicLED.getDescriptors()) {
                     if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
                         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                         gatt.writeDescriptor(descriptor);
@@ -165,7 +177,9 @@ public class ArduinoService extends Service {
             Log.d(TAG, "Received extra data: " + stringBuilder.toString());
             Log.d(TAG, "Int value:" + dataInt);
 
-            playProximityBeep(dataInt);
+            if (dataInt != 0) {
+                playProximityBeep(dataInt);
+            }
         }
         sendBroadcast(intent);
     }
@@ -331,20 +345,20 @@ public class ArduinoService extends Service {
      */
     private void playProximityBeep(int distance) {
         if(!beeping) {
+            beeping = true;
             final long interval = distance * 10;
-//            handler.post(new Runnable() {
-//                public void run() {
-//                    Log.d(TAG, "Beeping");
-//                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-//                    try {
-//                        Thread.sleep(interval);
-//                        beeping = false;
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-////                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-//                }
-//            });
+            handler.post(new Runnable() {
+                public void run() {
+                    Log.d(TAG, "Beeping");
+                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+                    try {
+                        Thread.sleep(interval);
+                        beeping = false;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         }
     }
 }

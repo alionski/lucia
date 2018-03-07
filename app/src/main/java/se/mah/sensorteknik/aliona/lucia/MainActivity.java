@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements
      * Added to back stack for easy backwards navigation.
      */
     public void showInfoFragment() {
-        getSupportFragmentManager().beginTransaction().add(R.id.fragment_container,
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                 InformationFragment.newInstance(), "infoFrag").addToBackStack(null).commit();
     }
 
