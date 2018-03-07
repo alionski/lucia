@@ -80,7 +80,6 @@ public class ArduinoService extends Service {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction);
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" +
@@ -90,14 +89,12 @@ public class ArduinoService extends Service {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
                 Log.i(TAG, "Disconnected from GATT server.");
-                broadcastUpdate(intentAction);
             }
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
 
                 BluetoothGattCharacteristic characteristicProximity = gatt
                         .getService(SERVICE_UUID)
@@ -135,7 +132,6 @@ public class ArduinoService extends Service {
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // TODO: only one of these?
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }
 
@@ -144,32 +140,8 @@ public class ArduinoService extends Service {
                                             BluetoothGattCharacteristic characteristic) {
             // TODO: should be done by controller?
             readCharacteristic(characteristic);
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
     };
-
-    private void broadcastUpdate(final String action) {
-        final Intent intent = new Intent(action);
-        sendBroadcast(intent);
-    }
-
-    private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic characteristic) {
-        final Intent intent = new Intent(action);
-        final byte[] data = characteristic.getValue();
-        final int dataInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-        if (data != null && data.length > 0) {
-            final StringBuilder stringBuilder = new StringBuilder(data.length);
-            for(byte byteChar : data)
-                stringBuilder.append(String.format("%02X ", byteChar));
-            Log.d(TAG, "Received extra data: " + stringBuilder.toString());
-            Log.d(TAG, "Int value:" + dataInt);
-
-            playProximityBeep(dataInt);
-        }
-        sendBroadcast(intent);
-    }
-
 
     public boolean initialize() {
         if (mBluetoothManager == null) {
@@ -333,20 +305,21 @@ public class ArduinoService extends Service {
      */
     private void playProximityBeep(int distance) {
         if(!beeping) {
+            beeping = true;
             final long interval = distance * 10;
-//            handler.post(new Runnable() {
-//                public void run() {
-//                    Log.d(TAG, "Beeping");
-//                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-//                    try {
-//                        Thread.sleep(interval);
-//                        beeping = false;
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-////                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-//                }
-//            });
+            handler.post(new Runnable() {
+                public void run() {
+                    Log.d(TAG, "Beeping");
+                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+                    try {
+                        Thread.sleep(interval);
+                        beeping = false;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+//                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
+                }
+            });
         }
     }
 }
