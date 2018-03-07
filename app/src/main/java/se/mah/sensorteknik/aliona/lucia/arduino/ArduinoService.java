@@ -10,8 +10,6 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
@@ -21,8 +19,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
-import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -34,60 +30,32 @@ import java.util.UUID;
 
 public class ArduinoService extends Service {
     private static final String TAG = ArduinoService.class.getSimpleName();
-
     // https://www.bluetooth.com/specifications/gatt/descriptors
     // org.bluetooth.descriptor.gatt.client_characteristic_configuration
-    // TODO: UODATE VALUE, THIS IS NOT OUR DESCRIPTOR
     private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
-
     private final UUID SERVICE_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
     private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
-    private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHATACTERISTICS_UUID);
-    public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
-    public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
-
-    private BluetoothLeScanner mBLEScanner;
-    private ScanCallback mScanCallback;
+    private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHARACTERISTICS_UUID);
     private final IBinder mBinder = new LocalBinder();
 
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
-    private int mConnectionState = STATE_DISCONNECTED;
     private Handler handler = new Handler();
     private ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
-
-
-    private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTING = 1;
-    private static final int STATE_CONNECTED = 2;
-
     private boolean beeping = false;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                intentAction = ACTION_GATT_CONNECTED;
-                mConnectionState = STATE_CONNECTED;
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                intentAction = ACTION_GATT_DISCONNECTED;
-                mConnectionState = STATE_DISCONNECTED;
                 Log.i(TAG, "Disconnected from GATT server.");
             }
         }
@@ -100,11 +68,23 @@ public class ArduinoService extends Service {
                         .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
 
+                BluetoothGattCharacteristic characteristicLED = gatt
+                        .getService(SERVICE_UUID)
+                        .getCharacteristic(LED_CHARACTERISTICS_UUID);
+
                 // Enable notifications for this characteristic locally
                 gatt.setCharacteristicNotification(characteristicProximity, true);
+                gatt.setCharacteristicNotification(characteristicLED, true);
 
                 // Write on the config descriptor to be notified when the value changes
                 for (BluetoothGattDescriptor descriptor : characteristicProximity.getDescriptors()) {
+                    if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
+                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        gatt.writeDescriptor(descriptor);
+                    }
+                }
+
+                for (BluetoothGattDescriptor descriptor : characteristicLED.getDescriptors()) {
                     if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
                         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                         gatt.writeDescriptor(descriptor);
@@ -131,17 +111,33 @@ public class ArduinoService extends Service {
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                // TODO: only one of these?
+                manageResults(characteristic);
             }
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            // TODO: should be done by controller?
             readCharacteristic(characteristic);
         }
     };
+
+
+    private void manageResults(final BluetoothGattCharacteristic characteristic) {
+        final byte[] data = characteristic.getValue();
+        final int dataInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        if (data != null && data.length > 0) {
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for(byte byteChar : data)
+                stringBuilder.append(String.format("%02X ", byteChar));
+            Log.d(TAG, "Received extra data: " + stringBuilder.toString());
+            Log.d(TAG, "Int value:" + dataInt);
+
+            if (dataInt != 0) {
+                playProximityBeep(dataInt);
+            }
+        }
+    }
 
     public boolean initialize() {
         if (mBluetoothManager == null) {
@@ -171,12 +167,7 @@ public class ArduinoService extends Service {
         if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
                 && mBluetoothGatt != null) {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-            if (mBluetoothGatt.connect()) {
-                mConnectionState = STATE_CONNECTING;
-                return true;
-            } else {
-                return false;
-            }
+            return mBluetoothGatt.connect();  // returns boolean
         }
 
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
@@ -189,7 +180,6 @@ public class ArduinoService extends Service {
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
-        mConnectionState = STATE_CONNECTING;
         return true;
     }
 
@@ -277,24 +267,10 @@ public class ArduinoService extends Service {
         /*get the read characteristic from the service*/
         BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(LED_CHARACTERISTICS_UUID);
         mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
-        boolean success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
-        if(!success){
-            Log.w(TAG, "Failed to write characteristic");
-        } else {
-            Log.w(TAG, "SUCCESS to write characteristic");
-        }
-    }
-
-    /**
-     * Retrieves a list of supported GATT services on the connected device. This should be
-     * invoked only after {@code BluetoothGatt#discoverServices()} completes successfully.
-     *
-     * @return A {@code List} of supported services.
-     */
-    public List<BluetoothGattService> getSupportedGattServices() {
-        if (mBluetoothGatt == null) return null;
-
-        return mBluetoothGatt.getServices();
+        boolean success;
+        do {
+            success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
+        } while (!success);
     }
 
     /**
@@ -317,7 +293,6 @@ public class ArduinoService extends Service {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-//                toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
                 }
             });
         }

@@ -5,27 +5,18 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
-import android.bluetooth.le.ScanSettings;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.IBinder;
-import android.os.ParcelUuid;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
-
-import java.util.Arrays;
-
 import se.mah.sensorteknik.aliona.lucia.arduino.ArduinoService;
-import se.mah.sensorteknik.aliona.lucia.arduino.GattAttributes;
 
 /**
  * Created by aliona on 2018-02-27.
@@ -62,7 +53,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
             mBluetoothLeService = null;
         }
     };
-
 
     @Override
     public void onFragmentInteraction(int command) {
@@ -143,13 +133,11 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     public void startScan() {
-
         Log.i(TAG, "Starting scan");
-
-        ScanSettings settings = new ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .setReportDelay(1)
-                .build();
+//        ScanSettings settings = new ScanSettings.Builder()
+//                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+//                .setReportDelay(1)
+//                .build();
 
 //        ScanFilter scanFilter = new ScanFilter.Builder()
 //                .setServiceUuid(ParcelUuid.fromString(GattAttributes.PROXIMITY_UUID)).build();
