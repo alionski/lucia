@@ -59,7 +59,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         switch (command) {
             case MainFragment.TOGGLE_LEDS:
                 ledsOn = !ledsOn;
-                mBluetoothLeService.ledsOnOff(ledsOn);
+                ledsOn = mBluetoothLeService.ledsOnOff(ledsOn);
                 break;
             case MainFragment.TOGGLE_BEEPING:
 
@@ -81,8 +81,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     private void initBluetooth() {
-        // Use this check to determine whether BLE is supported on the device. Then
-        // you can selectively disable BLE-related features.
         if (!mActivity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(mActivity, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
             mActivity.finish();
@@ -140,7 +138,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
 //                .build();
 
 //        ScanFilter scanFilter = new ScanFilter.Builder()
-//                .setServiceUuid(ParcelUuid.fromString(GattAttributes.PROXIMITY_UUID)).build();
+//                .setServiceUuid(ParcelUuid.fromString(GattAttributes.SERVICE_UUID)).build();
         mBLEScanner.startScan(mScanCallback);
     }
 
