@@ -34,6 +34,8 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     private ScanCallback mScanCallback;
     private MainActivity mActivity;
     private boolean ledsOn = false;
+    private boolean proximityOn = false;
+    private boolean beepingOn = false;
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
         @Override
@@ -54,6 +56,11 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         }
     };
 
+    /**
+     * Checks which button has been pressed in the MainFragment, and acts
+     * accordingly.
+     * @param command
+     */
     @Override
     public void onFragmentInteraction(int command) {
         switch (command) {
@@ -62,10 +69,12 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
                 mBluetoothLeService.ledsOnOff(ledsOn);
                 break;
             case MainFragment.TOGGLE_BEEPING:
-
+                beepingOn = !beepingOn;
+                mBluetoothLeService.beepingOnOff(beepingOn);
                 break;
             case MainFragment.TOGGLE_DISTANCE_SENSOR:
-
+                proximityOn = !proximityOn;
+                mBluetoothLeService.proximityOnOff(proximityOn);
                 break;
             case MainFragment.SHOW_INFO_FRAG:
                 mActivity.showInfoFragment();
