@@ -45,6 +45,7 @@ public class ArduinoService extends Service {
     private Handler handler = new Handler();
     private ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
     private boolean beeping = false;
+    private boolean beepingOn = false;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -134,7 +135,9 @@ public class ArduinoService extends Service {
             Log.d(TAG, "Int value:" + dataInt);
 
             if (dataInt != 0) {
-                playProximityBeep(dataInt);
+                if(beepingOn) {
+                    playProximityBeep(dataInt);
+                }
             }
         }
     }
@@ -183,6 +186,10 @@ public class ArduinoService extends Service {
         return true;
     }
 
+    /**
+     * Turns on or off the leds on the Arduino device.
+     * @param isOn True or false for on or off.
+     */
     public void ledsOnOff(boolean isOn) {
         if (isOn) {
             writeLEDCharacteristic(1);
@@ -190,6 +197,28 @@ public class ArduinoService extends Service {
             writeLEDCharacteristic(0);
         }
     }
+
+    /**
+     * Turns on or off the proximity sensor on the Arduino device.
+     * @param isOn True or false for on or off.
+     */
+    public void proximityOnOff(boolean isOn) {
+        if(isOn) {
+            writeProximityCharacteristic(1);
+        } else {
+            writeProximityCharacteristic(0);
+        }
+    }
+
+    /**
+     * Turns on or off the beeping sound, when objects are near, on the Android device.
+     * @param isOn true or false for on or off.
+     */
+    public void beepingOnOff(boolean isOn) {
+        beepingOn = isOn;
+    }
+
+
 
     public class LocalBinder extends Binder {
         public ArduinoService getService() {
@@ -253,6 +282,26 @@ public class ArduinoService extends Service {
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
+    private void writeProximityCharacteristic(int onOff) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        /*check if the service is available on the device*/
+        BluetoothGattService mCustomService = mBluetoothGatt.getService(SERVICE_UUID);
+        if(mCustomService == null){
+            Log.w(TAG, "Service not found");
+            return;
+        }
+        /*get the read characteristic from the service*/
+        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
+        mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
+        boolean success;
+        do {
+            success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
+        } while (!success);
+    }
+
     private void writeLEDCharacteristic(int onOff) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
@@ -275,8 +324,8 @@ public class ArduinoService extends Service {
 
     /**
      * Plays a sound representing some proximity detected by the BLE device.
-     * Plays a beep as long as one is already not playing, or the thread is
-     * sleeping. The distance input determines the sleep after the beep.
+     * Plays a beep as long as one is already not playing.
+     * The distance input determines the sleep after the beep.
      * @param distance Distance value from sensor
      */
     private void playProximityBeep(int distance) {
