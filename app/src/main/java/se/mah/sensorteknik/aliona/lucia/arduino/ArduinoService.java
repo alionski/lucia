@@ -305,12 +305,10 @@ public class ArduinoService extends Service {
         /*get the read characteristic from the service*/
         BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(LED_CHARACTERISTICS_UUID);
         mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
-        boolean success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
-        if(!success){
-            Log.w(TAG, "Failed to write characteristic");
-        } else {
-            Log.w(TAG, "SUCCESS to write characteristic");
-        }
+        boolean success;
+        do {
+            success = mBluetoothGatt.writeCharacteristic(mWriteCharacteristic);
+        } while (!success);
     }
 
     /**

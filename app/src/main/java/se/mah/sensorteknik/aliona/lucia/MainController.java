@@ -63,7 +63,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         }
     };
 
-
     @Override
     public void onFragmentInteraction(int command) {
         switch (command) {
@@ -140,13 +139,11 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     public void startScan() {
-
         Log.i(TAG, "Starting scan");
-
-        ScanSettings settings = new ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .setReportDelay(1)
-                .build();
+//        ScanSettings settings = new ScanSettings.Builder()
+//                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+//                .setReportDelay(1)
+//                .build();
 
 //        ScanFilter scanFilter = new ScanFilter.Builder()
 //                .setServiceUuid(ParcelUuid.fromString(GattAttributes.PROXIMITY_UUID)).build();
