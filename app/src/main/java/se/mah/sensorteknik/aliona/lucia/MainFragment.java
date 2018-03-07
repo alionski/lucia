@@ -25,6 +25,7 @@ public class MainFragment extends Fragment implements View.OnClickListener{
     public static final int TOGGLE_LEDS = 0;
     public static final int TOGGLE_DISTANCE_SENSOR = 1;
     public static final int TOGGLE_BEEPING = 2;
+    public static final int SHOW_INFO_FRAG = 3;
 
     private boolean ledOn = false;
     private boolean proximityOn = false;
@@ -83,6 +84,7 @@ public class MainFragment extends Fragment implements View.OnClickListener{
         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
         switch(view.getId()) {
             case R.id.button_information:
+                mListener.onFragmentInteraction(SHOW_INFO_FRAG);
                 break;
             case R.id.button_led_actuators:
                 mListener.onFragmentInteraction(TOGGLE_LEDS);
