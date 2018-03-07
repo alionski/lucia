@@ -10,7 +10,7 @@ public class GattAttributes {
     private static HashMap<String, String> attributes = new HashMap();
     public static String PROXIMITY_UUID = "d68b43f7-dbdf-4496-badb-0c59f8e7a5ac";
     public static String PROXIMITY_CHARACTERISTICS_UUID = "250416ca-a580-4a39-959d-32bdab46403b";
-    public static String LED_CHATACTERISTICS_UUID = "5377a75b-0b55-41f2-a415-bcf8e7510921";
+    public static String LED_CHARACTERISTICS_UUID = "5377a75b-0b55-41f2-a415-bcf8e7510921";
 
     static {
         // Sample Services.

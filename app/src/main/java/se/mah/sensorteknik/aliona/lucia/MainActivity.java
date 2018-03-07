@@ -17,11 +17,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import se.mah.sensorteknik.aliona.lucia.services.SensorService;
-import se.mah.sensorteknik.aliona.lucia.services.SensorServiceListener;
 
 public class MainActivity extends AppCompatActivity implements
-        MainFragment.OnFragmentInteractionListener,
-        SensorServiceListener {
+        MainFragment.OnFragmentInteractionListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -37,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             boundSensorService = ((SensorService.LocalBinder) binder).getService();
-            boundSensorService.setSensorServiceListener(MainActivity.this);
             Log.d(TAG, "onServiceConnected:SensorService is connected");
         }
 
@@ -66,13 +63,11 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        registerReceiver(bleDeviceReceiver, getGATTReceiverFilter());
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(bleDeviceReceiver);
     }
 
     @Override
@@ -119,41 +114,6 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-    /**
-     * BroadcastReceiver listening for Broadcasts set with getGattReceiverFilter().
-     */
-    private final BroadcastReceiver bleDeviceReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            switch(action) {
-//                case ArduinoService.ACTION_GATT_CONNECTED:
-//                    connectedToBle = true;
-//                    break;
-//                case ArduinoService.ACTION_GATT_DISCONNECTED:
-//                    connectedToBle = false;
-//                    break;
-//                case AduinoService.ACTION_GATT_SERVICES_DISCOVERED:
-//                    break;
-//                case ArduinoService.ACTION_DATA_AVAILABLE:
-//                    break;
-            }
-        }
-    };
-
-    /**
-     * Returns an intentFilter with the actions belonging to BluetoothLeService
-     * added. Must be set to listen for proper broadcasts.
-     * @return IntentFilter with BluetoothLeService actions.
-     */
-    private IntentFilter getGATTReceiverFilter() {
-        IntentFilter intentFilter = new IntentFilter();
-//        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-//        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-//        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
-//        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        return intentFilter;
-    }
-
     @Override
     public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -175,10 +135,5 @@ public class MainActivity extends AppCompatActivity implements
                 mController.startScan();
             }
         }
-    }
-
-    @Override
-    public void onLightSensorChanged(float light) {
-
     }
 }
