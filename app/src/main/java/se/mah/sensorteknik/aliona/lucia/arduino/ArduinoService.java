@@ -33,11 +33,13 @@ public class ArduinoService extends Service {
     // https://www.bluetooth.com/specifications/gatt/descriptors
     // org.bluetooth.descriptor.gatt.client_characteristic_configuration
     private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
-    private final UUID SERVICE_UUID = UUID.fromString(GattAttributes.PROXIMITY_UUID);
+    private static final UUID DESCRIPTOR_PHOTOCELL_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
+    private static final UUID PROXIMITY_READINGS_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_READINGS_CHARACTERISTC_UUID);
+    private final UUID SERVICE_UUID = UUID.fromString(GattAttributes.SERVICE_UUID);
     private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHARACTERISTICS_UUID);
+    private final UUID PHOTOCELL_CHARACTERISTIC_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
     private final IBinder mBinder = new LocalBinder();
-
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
@@ -46,6 +48,7 @@ public class ArduinoService extends Service {
     private ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
     private boolean beeping = false;
     private boolean beepingOn = false;
+    private boolean darkOutside;
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
@@ -69,13 +72,13 @@ public class ArduinoService extends Service {
                         .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
 
-                BluetoothGattCharacteristic characteristicLED = gatt
+                BluetoothGattCharacteristic charactersiticLight = gatt
                         .getService(SERVICE_UUID)
-                        .getCharacteristic(LED_CHARACTERISTICS_UUID);
+                        .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
 
                 // Enable notifications for this characteristic locally
                 gatt.setCharacteristicNotification(characteristicProximity, true);
-                gatt.setCharacteristicNotification(characteristicLED, true);
+                gatt.setCharacteristicNotification(charactersiticLight, true);
 
                 // Write on the config descriptor to be notified when the value changes
                 for (BluetoothGattDescriptor descriptor : characteristicProximity.getDescriptors()) {
@@ -85,7 +88,7 @@ public class ArduinoService extends Service {
                     }
                 }
 
-                for (BluetoothGattDescriptor descriptor : characteristicLED.getDescriptors()) {
+                for (BluetoothGattDescriptor descriptor : charactersiticLight.getDescriptors()) {
                     if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
                         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                         gatt.writeDescriptor(descriptor);
@@ -103,6 +106,11 @@ public class ArduinoService extends Service {
                 BluetoothGattCharacteristic characteristic = gatt
                         .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
+                gatt.readCharacteristic(characteristic);
+            } else if (DESCRIPTOR_PHOTOCELL_UUID.equals(descriptor.getUuid())) {
+                BluetoothGattCharacteristic characteristic = gatt
+                        .getService(SERVICE_UUID)
+                        .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
                 gatt.readCharacteristic(characteristic);
             }
         }
@@ -125,20 +133,18 @@ public class ArduinoService extends Service {
 
 
     private void manageResults(final BluetoothGattCharacteristic characteristic) {
-        final byte[] data = characteristic.getValue();
-        final int dataInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-        if (data != null && data.length > 0) {
-            final StringBuilder stringBuilder = new StringBuilder(data.length);
-            for(byte byteChar : data)
-                stringBuilder.append(String.format("%02X ", byteChar));
-            Log.d(TAG, "Received extra data: " + stringBuilder.toString());
+        if (characteristic.getUuid() == PROXIMITY_CHARACTERISTICS_UUID) {
+            final int dataInt = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
             Log.d(TAG, "Int value:" + dataInt);
-
             if (dataInt != 0) {
                 if(beepingOn) {
                     playProximityBeep(dataInt);
                 }
             }
+        } else if (characteristic.getUuid() == PHOTOCELL_CHARACTERISTIC_UUID) {
+            int dark = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+            darkOutside = dark != 0;
+            Log.i(TAG, "Is it dark? " + (dark == 0 ? "NO" : "YES"));
         }
     }
 
@@ -188,13 +194,19 @@ public class ArduinoService extends Service {
 
     /**
      * Turns on or off the leds on the Arduino device.
-     * @param isOn True or false for on or off.
+     * @param on True or false for on or off.
      */
-    public void ledsOnOff(boolean isOn) {
-        if (isOn) {
-            writeLEDCharacteristic(1);
+    public boolean ledsOnOff(boolean on) {
+        if (on) {
+            if (darkOutside) {
+                writeLEDCharacteristic(1);
+                return true;
+            } else {
+                return false;
+            }
         } else {
             writeLEDCharacteristic(0);
+            return false;
         }
     }
 
@@ -294,7 +306,7 @@ public class ArduinoService extends Service {
             return;
         }
         /*get the read characteristic from the service*/
-        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
+        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(PROXIMITY_READINGS_CHARACTERISTICS_UUID);
         mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
         boolean success;
         do {
