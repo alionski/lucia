@@ -8,9 +8,7 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
-import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
@@ -20,7 +18,6 @@ import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
-
 import java.util.Locale;
 import java.util.UUID;
 
@@ -39,7 +36,7 @@ public class ArduinoService extends Service {
     private static final int OFF = 0;
     private static final boolean DARK = true;
     private static final boolean BRIGHT = false;
-    private static final int BRIGHTNESS_THREASHOLD = 250;
+    private static final int BRIGHTNESS_THRESHOLD = 250;
     private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private static final UUID DESCRIPTOR_PHOTOCELL_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
     private static final UUID PROXIMITY_READINGS_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_READINGS_CHARACTERISTC_UUID);
@@ -48,7 +45,6 @@ public class ArduinoService extends Service {
     private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHARACTERISTICS_UUID);
     private final UUID PHOTOCELL_CHARACTERISTIC_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
     private final IBinder mBinder = new LocalBinder();
-    private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
@@ -115,7 +111,6 @@ public class ArduinoService extends Service {
                 gatt.readCharacteristic(characteristic);
                 Thread thread = new Thread( new PhotocellReader(gatt));
                 thread.start();
-//                enablePhotocellNotifications(gatt);
             }
             if (DESCRIPTOR_PHOTOCELL_UUID.equals(descriptor.getCharacteristic().getUuid())) {
                 Log.d(TAG, "DESCRIPTOR PHOTOCELL WRITE");
@@ -123,22 +118,6 @@ public class ArduinoService extends Service {
                         .getService(PROXIMITY_SERVICE_UUID)
                         .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
                 gatt.readCharacteristic(characteristic);
-            }
-        }
-
-        private void enablePhotocellNotifications(BluetoothGatt gatt) {
-            BluetoothGattCharacteristic charactersiticLight = gatt
-                    .getService(PROXIMITY_SERVICE_UUID)
-                    .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
-            gatt.setCharacteristicNotification(charactersiticLight, true);
-
-            for (BluetoothGattDescriptor descriptor : charactersiticLight.getDescriptors()) {
-                Log.d(TAG, "REGISTERING FOR PHOTOCELL UPDATES");
-                Log.d(TAG, "DESCRIPTOR PHOTOCELL UUID: " + descriptor.getUuid());
-                if ((descriptor.getUuid().getMostSignificantBits() >> 32) == 0x2902) {
-                    descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                    gatt.writeDescriptor(descriptor);
-                }
             }
         }
 
@@ -183,6 +162,31 @@ public class ArduinoService extends Service {
         }
     }
 
+    public class LocalBinder extends Binder {
+        public ArduinoService getService() {
+            return ArduinoService.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        // After using a given device, you should make sure that BluetoothGatt.close() is called
+        // such that resources are cleaned up properly.  In this particular example, close() is
+        // invoked when the UI is disconnected from the Service.
+        disconnect();
+        close();
+        return super.onUnbind(intent);
+    }
+
+    /**
+     * Called only when the photocell voltage array is full and we can calculate the current average
+     * and decide whether there's need to switch on LEDs.
+     */
     private void calculateBrightness() {
         int sum = 0;
         for (int i=0; i<brightnessSamples.length; i++) {
@@ -190,7 +194,7 @@ public class ArduinoService extends Service {
         }
         int average = sum / brightnessSamples.length;
         Log.i(TAG, "PHOTOCELL AVERAGE: " + average);
-        if (average < BRIGHTNESS_THREASHOLD) {
+        if (average < BRIGHTNESS_THRESHOLD) {
             if (ledsControlOn) {
                 if (!darkOutside) {
                     brightnessChanged(DARK);
@@ -206,6 +210,11 @@ public class ArduinoService extends Service {
         index = 0;
     }
 
+    /**
+     * Method called from calulateBrightness() is the new average of light values is different from the current -->
+     * the user might want switch on or off the lights.
+     * @param brightness
+     */
     private void brightnessChanged(boolean brightness) {
         if (brightness == DARK && !ledsOn) {
                 mTTS = new TextToSpeech(this,
@@ -256,25 +265,14 @@ public class ArduinoService extends Service {
         }
     }
 
-    public boolean initialize() {
-        if (mBluetoothManager == null) {
-            mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            if (mBluetoothManager == null) {
-                Log.e(TAG, "Unable to initialize BluetoothManager.");
-                return false;
-            }
-        }
-
-        mBluetoothAdapter = mBluetoothManager.getAdapter();
-        if (mBluetoothAdapter == null) {
-            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
-            return false;
-        }
-
-        return true;
-    }
-
-    public boolean connect(final String address) {
+    /**
+     * Called when the BLE device has been found and the address is known from MainController.
+     * @param adapter
+     * @param address
+     * @return
+     */
+    public boolean connect(BluetoothAdapter adapter, final String address) {
+        mBluetoothAdapter = adapter;
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
@@ -340,27 +338,6 @@ public class ArduinoService extends Service {
      */
     public void beepingOnOff(boolean isOn) {
         beepingOn = isOn;
-    }
-
-    public class LocalBinder extends Binder {
-        public ArduinoService getService() {
-            return ArduinoService.this;
-        }
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        // After using a given device, you should make sure that BluetoothGatt.close() is called
-        // such that resources are cleaned up properly.  In this particular example, close() is
-        // invoked when the UI is disconnected from the Service.
-        disconnect();
-        close();
-        return super.onUnbind(intent);
     }
 
     /**

@@ -1,52 +1,20 @@
 package se.mah.sensorteknik.aliona.lucia;
 
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
-import se.mah.sensorteknik.aliona.lucia.services.SensorService;
-
-public class MainActivity extends AppCompatActivity implements
-        MainFragment.OnFragmentInteractionListener {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-
     private static final int REQUEST_ENABLE_BT = 5868;
     private static final int REQUEST_FINE_LOCATION =888;
-
     private MainController mController;
-
-    private SensorService boundSensorService;
-    private boolean isSensorServiceBound;
-
-    private ServiceConnection sensorServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder binder) {
-            boundSensorService = ((SensorService.LocalBinder) binder).getService();
-            Log.d(TAG, "onServiceConnected:SensorService is connected");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            boundSensorService.setSensorServiceListener(null);
-            boundSensorService = null;
-            Log.d(TAG, "onServiceDisconnected:SensorService is disconnected");
-        }
-    };
-
-    private boolean connectedToBle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,27 +22,13 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
         mController = new MainController(this);
         initUI();
-
-        startService(new Intent(MainActivity.this, SensorService.class));
-        doBindService();
-        Log.d(TAG, "onCreate:SensorService started");
+        // The service is bound by the controller in its constructor, so I removed the binding here
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        mController.disconnect();
-        doUnbindService();
+        mController.initBluetooth();
     }
 
     private void initUI() {
@@ -95,25 +49,6 @@ public class MainActivity extends AppCompatActivity implements
                 InformationFragment.newInstance(), "infoFrag").addToBackStack(null).commit();
     }
 
-    private void doBindService() {
-        bindService(new Intent(MainActivity.this, SensorService.class),
-                sensorServiceConnection, Context.BIND_AUTO_CREATE);
-
-        isSensorServiceBound = true;
-    }
-
-    private void doUnbindService() {
-        if (isSensorServiceBound) {
-            unbindService(sensorServiceConnection);
-            isSensorServiceBound = false;
-        }
-    }
-
-    @Override
-    public void onFragmentInteraction(int command) {
-
-    }
-
     @Override
     public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -132,8 +67,19 @@ public class MainActivity extends AppCompatActivity implements
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == RESULT_OK) {
-                mController.startScan();
+                mController.checkLocationAndScan();
             }
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mController.disconnect();
     }
 }
