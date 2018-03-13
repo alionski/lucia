@@ -37,10 +37,12 @@ public class ArduinoService extends Service {
     private static final boolean DARK = true;
     private static final boolean BRIGHT = false;
     private static final int BRIGHTNESS_THRESHOLD = 250;
+
+    private final UUID SERVICE_UUID = UUID.fromString(GattAttributes.SERVICE_UUID);
     private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private static final UUID DESCRIPTOR_PHOTOCELL_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
+    private static final UUID VIBRATION_MOTOR_UUID = UUID.fromString(GattAttributes.VIBRATION_CHARACTERISTIC_UUID);
     private static final UUID PROXIMITY_READINGS_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_READINGS_CHARACTERISTC_UUID);
-    private final UUID PROXIMITY_SERVICE_UUID = UUID.fromString(GattAttributes.SERVICE_UUID);
     private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHARACTERISTICS_UUID);
     private final UUID PHOTOCELL_CHARACTERISTIC_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
@@ -79,7 +81,7 @@ public class ArduinoService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
 
                 BluetoothGattCharacteristic characteristicProximity = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
 
                 // Enable notifications for this characteristic locally
@@ -106,7 +108,7 @@ public class ArduinoService extends Service {
             if (DESCRIPTOR_PROXIMITY_UUID.equals(descriptor.getCharacteristic().getUuid())) {
                 Log.d(TAG, "DESCRIPTOR PROXIMITY WRITE");
                 BluetoothGattCharacteristic characteristic = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
                 gatt.readCharacteristic(characteristic);
                 Thread thread = new Thread( new PhotocellReader(gatt));
@@ -115,7 +117,7 @@ public class ArduinoService extends Service {
             if (DESCRIPTOR_PHOTOCELL_UUID.equals(descriptor.getCharacteristic().getUuid())) {
                 Log.d(TAG, "DESCRIPTOR PHOTOCELL WRITE");
                 BluetoothGattCharacteristic characteristic = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
                 gatt.readCharacteristic(characteristic);
             }
@@ -338,6 +340,27 @@ public class ArduinoService extends Service {
      */
     public void beepingOnOff(boolean isOn) {
         beepingOn = isOn;
+        switchBzzzzz(isOn ? 0 : 1); // if beeping is on, then switch vibration off, and vice versa
+    }
+
+    private void switchBzzzzz(int isOn) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        /*check if the service is available on the device*/
+        BluetoothGattService mCustomService = mBluetoothGatt.getService(SERVICE_UUID);
+        if(mCustomService == null){
+            Log.w(TAG, "Service not found");
+            return;
+        }
+        /*get the read characteristic from the service*/
+        BluetoothGattCharacteristic writeCharacteristic = mCustomService.getCharacteristic(VIBRATION_MOTOR_UUID);
+        writeCharacteristic.setValue(isOn, BluetoothGattCharacteristic.FORMAT_UINT16,0);
+        boolean success;
+        do {
+            success = mBluetoothGatt.writeCharacteristic(writeCharacteristic);
+        } while (!success);
     }
 
     /**
@@ -387,7 +410,7 @@ public class ArduinoService extends Service {
             return;
         }
         /*check if the service is available on the device*/
-        BluetoothGattService mCustomService = mBluetoothGatt.getService(PROXIMITY_SERVICE_UUID);
+        BluetoothGattService mCustomService = mBluetoothGatt.getService(SERVICE_UUID);
         if(mCustomService == null){
             Log.w(TAG, "Service not found");
             return;
@@ -407,7 +430,7 @@ public class ArduinoService extends Service {
             return;
         }
         /*check if the service is available on the device*/
-        BluetoothGattService mCustomService = mBluetoothGatt.getService(PROXIMITY_SERVICE_UUID);
+        BluetoothGattService mCustomService = mBluetoothGatt.getService(SERVICE_UUID);
         if(mCustomService == null){
             Log.w(TAG, "Service not found");
             return;
@@ -477,7 +500,7 @@ public class ArduinoService extends Service {
                     e.printStackTrace();
                 }
                 BluetoothGattCharacteristic characteristic = gatt
-                        .getService(PROXIMITY_SERVICE_UUID)
+                        .getService(SERVICE_UUID)
                         .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
                 gatt.readCharacteristic(characteristic);
             }

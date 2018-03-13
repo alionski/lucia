@@ -90,29 +90,28 @@ public class MainFragment extends Fragment implements View.OnClickListener{
                 mListener.onFragmentInteraction(TOGGLE_LEDS);
                 if(!ledOn) {
                     mLEDButton.setContentDescription(getString(R.string.led_description, getString(R.string.function_on)));
-                    ledOn = true;
                 } else {
                     mLEDButton.setContentDescription(getString(R.string.led_description, getString(R.string.function_off)));
-                    ledOn = false;
                 }
+                ledOn = !ledOn;
                 break;
             case R.id.button_proximity_sensor:
+                mListener.onFragmentInteraction(TOGGLE_DISTANCE_SENSOR);
                 if(!proximityOn) {
                     mProximityButton.setContentDescription(getString(R.string.proximity_description, getString(R.string.function_on)));
-                    proximityOn = true;
                 } else {
                     mProximityButton.setContentDescription(getString(R.string.proximity_description, getString(R.string.function_off)));
-                    proximityOn = false;
                 }
+                proximityOn = !proximityOn;
                 break;
             case R.id.button_text_to_speech:
+                mListener.onFragmentInteraction(TOGGLE_BEEPING);
                 if(!beepingOn) {
                     mBeepButton.setContentDescription(getString(R.string.beep_description, getString(R.string.function_on)));
-                    beepingOn = true;
                 } else {
                     mBeepButton.setContentDescription(getString(R.string.beep_description, getString(R.string.function_off)));
-                    beepingOn = false;
                 }
+                beepingOn = !beepingOn;
                 break;
         }
     }
