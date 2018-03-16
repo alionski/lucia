@@ -45,7 +45,7 @@ public class ArduinoService extends Service {
     private static final UUID DESCRIPTOR_PROXIMITY_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private static final UUID DESCRIPTOR_PHOTOCELL_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
     private static final UUID VIBRATION_MOTOR_UUID = UUID.fromString(GattAttributes.VIBRATION_CHARACTERISTIC_UUID);
-    private static final UUID PROXIMITY_READINGS_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_READINGS_CHARACTERISTC_UUID);
+    private static final UUID SENSOR_ON_OFF_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.SENSOR_ON_OFF_UUID);
     private final UUID PROXIMITY_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.PROXIMITY_CHARACTERISTICS_UUID);
     private final UUID LED_CHARACTERISTICS_UUID = UUID.fromString(GattAttributes.LED_CHARACTERISTICS_UUID);
     private final UUID PHOTOCELL_CHARACTERISTIC_UUID = UUID.fromString(GattAttributes.PHOTOCELL_CHARACTERISTICS_UUID);
@@ -416,7 +416,7 @@ public class ArduinoService extends Service {
             return;
         }
         /*get the read characteristic from the service*/
-        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(PROXIMITY_READINGS_CHARACTERISTICS_UUID);
+        BluetoothGattCharacteristic mWriteCharacteristic = mCustomService.getCharacteristic(SENSOR_ON_OFF_CHARACTERISTICS_UUID);
         mWriteCharacteristic.setValue(onOff, BluetoothGattCharacteristic.FORMAT_UINT16,0);
         boolean success;
         do {
