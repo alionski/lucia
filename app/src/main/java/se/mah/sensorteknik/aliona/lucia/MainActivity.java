@@ -16,21 +16,51 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_FINE_LOCATION =888;
     private MainController mController;
 
+    /**
+     * Part of the activity lifecycle. Called first.
+     * @param savedInstanceState Possible saved instanceState bundle.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mController = new MainController(this);
         initUI();
-        // The service is bound by the controller in its constructor, so I removed the binding here
     }
 
+    /**
+     * Part of the activity lifecycle. Called when the activity is coming
+     * back or after starting.
+     */
     @Override
     protected void onResume() {
         super.onResume();
         mController.initBluetooth();
     }
 
+
+    /**
+     * Part of the activity lifecycle. Called when the activity
+     * is going into the background.
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    /**
+     * Part of the activity lifecycle. Called at the end when
+     * the activity is shutting down.
+     */
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mController.disconnect();
+    }
+
+    /**
+     * Adds and makes visible the application's main fragment.
+     */
     private void initUI() {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();
@@ -49,6 +79,13 @@ public class MainActivity extends AppCompatActivity {
                 InformationFragment.newInstance(), "infoFrag").addToBackStack(null).commit();
     }
 
+    /**
+     * Requests the user to enable Bluetooth permission for the application, if this
+     * is not already done.
+     * @param requestCode
+     * @param permissions
+     * @param grantResults
+     */
     @Override
     public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -63,6 +100,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Results from a permission request. Used to check if the Bluetooth
+     * is enabled.
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_ENABLE_BT) {
@@ -72,14 +116,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        mController.disconnect();
-    }
 }
