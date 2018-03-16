@@ -21,6 +21,9 @@ import android.util.Log;
 import java.util.Locale;
 import java.util.UUID;
 
+import se.mah.sensorteknik.aliona.lucia.R;
+
+
 /**
  * Created by aliona on 2018-02-27.
  * http://nilhcem.com/android-things/bluetooth-low-energy
@@ -177,9 +180,6 @@ public class ArduinoService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        // After using a given device, you should make sure that BluetoothGatt.close() is called
-        // such that resources are cleaned up properly.  In this particular example, close() is
-        // invoked when the UI is disconnected from the Service.
         disconnect();
         close();
         return super.onUnbind(intent);
@@ -213,7 +213,7 @@ public class ArduinoService extends Service {
     }
 
     /**
-     * Method called from calulateBrightness() is the new average of light values is different from the current -->
+     * Method called from calculateBrightness() is the new average of light values is different from the current -->
      * the user might want switch on or off the lights.
      * @param brightness
      */
@@ -229,7 +229,7 @@ public class ArduinoService extends Service {
                                             result == TextToSpeech.LANG_NOT_SUPPORTED) {
                                         Log.v(TAG, "Language is not available.");
                                     } else {
-                                        mTTS.speak("It is dark outside. You might want to switch on the lights",
+                                        mTTS.speak(getString(R.string.dark_alert),
                                                 TextToSpeech.QUEUE_ADD, null,
                                                 null);
                                     }
@@ -252,7 +252,7 @@ public class ArduinoService extends Service {
                                         result == TextToSpeech.LANG_NOT_SUPPORTED) {
                                     Log.v(TAG, "Language is not available.");
                                 } else {
-                                    mTTS.speak("It is bright outside. You might want to switch off the lights",
+                                    mTTS.speak(getString(R.string.light_alert),
                                             TextToSpeech.QUEUE_ADD, null,
                                             null);
                                 }
