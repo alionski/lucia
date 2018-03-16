@@ -27,8 +27,8 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     private static final int REQUEST_ENABLE_BT = 5868;
     private static final int REQUEST_FINE_LOCATION =888;
     private ArduinoService mBluetoothLeService;
-    private String mDeviceName;
     private String mDeviceAddress;
+    private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBLEScanner;
     private ScanCallback mScanCallback;
@@ -41,13 +41,6 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             mBluetoothLeService = ((ArduinoService.LocalBinder) service).getService();
-            if (!mBluetoothLeService.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth");
-//                finish();
-            }
-            // Automatically connects to the device upon successful start-up initialization.
-            Log.i(TAG, "Starting connection");
-            mBluetoothLeService.connect(mDeviceAddress);
         }
 
         @Override
@@ -55,6 +48,12 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
             mBluetoothLeService = null;
         }
     };
+
+    public MainController(MainActivity activity) {
+        mActivity = activity;
+        Intent gattServiceIntent = new Intent(mActivity, ArduinoService.class);
+        mActivity.bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
 
     /**
      * Checks which button has been pressed in the MainFragment, and acts
@@ -82,22 +81,60 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         }
     }
 
-    public MainController(MainActivity activity) {
-        mActivity = activity;
-        initBluetooth();
-        Intent gattServiceIntent = new Intent(mActivity, ArduinoService.class);
-        mActivity.bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
-    }
-
-    private void initBluetooth() {
+    /**
+     * Called from MainActivity's onResume.
+     * If BT is off, a dialog is shown, and when the user clicks Ok, checkLocationAndScan is called.
+     * If BT is on, calls checkLocationAndScan, which
+     */
+    public void initBluetooth() {
         if (!mActivity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(mActivity, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
             mActivity.finish();
         }
 
-        final BluetoothManager bluetoothManager =
+        mBluetoothManager =
                 (BluetoothManager) mActivity.getSystemService(Context.BLUETOOTH_SERVICE);
-        mBluetoothAdapter = bluetoothManager.getAdapter();
+        mBluetoothAdapter = mBluetoothManager.getAdapter();
+
+        // Ensures Bluetooth is available on the device and it is enabled. If not,
+        // displays a dialog requesting user permission to enable Bluetooth.
+        if (mBluetoothManager.getAdapter() == null || !mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            mActivity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        } else {
+            checkLocationAndScan();
+        }
+    }
+
+    /**
+     * Called either from here or MainActivity after BT is switched on.
+     */
+    public void checkLocationAndScan() {
+        if (ContextCompat.checkSelfPermission(mActivity,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            startScan();
+        } else {
+            ActivityCompat.requestPermissions(mActivity, new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_FINE_LOCATION);
+        }
+    }
+
+    /**
+     * Called from startScan()
+     */
+    private void connectServiceToArduino() {
+        if (mBluetoothLeService != null) {
+            Log.i(TAG, "Connecting to device");
+            mBluetoothLeService.connect(mBluetoothAdapter, mDeviceAddress);
+        } else {
+            Log.i(TAG, "Service is null FAILURE");
+        }
+    }
+
+    /**
+     * Called either from checkLocationAndScan() or MainActivity after the user gave permission to use location.
+     */
+    public void startScan() {
         mBLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
         mScanCallback = new ScanCallback() {
             @Override
@@ -105,50 +142,17 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
                 Log.i(TAG, "On scan result");
                 super.onScanResult(callbackType, result);
                 if (("Lucia").equals(result.getScanRecord().getDeviceName())) {
+
                     mDeviceAddress = result.getDevice().getAddress();
-                    startService(result.getDevice().getAddress());
-                    Log.i("DEVICE", callbackType + " " + result);
-                    Log.i("LUCIA FOUND, ADDRESS", result.getDevice().getAddress());
+                    connectServiceToArduino();
                     mBLEScanner.stopScan(mScanCallback);
+                    Log.i("DEVICE", callbackType + " " + result);
+                    Log.i("LUCIA FOUND, ADDRESS: ", result.getDevice().getAddress());
                 }
             }
         };
-
-        // Ensures Bluetooth is available on the device and it is enabled. If not,
-        // displays a dialog requesting user permission to enable Bluetooth.
-        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            mActivity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        } else {
-            if (ContextCompat.checkSelfPermission(mActivity,
-                    Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-                startScan();
-            } else {
-                ActivityCompat.requestPermissions(mActivity, new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
-                        REQUEST_FINE_LOCATION);
-            }
-        }
-    }
-
-    private void startService(String address) {
-        if (mBluetoothLeService != null) {
-            Log.i(TAG, "Connecting to device");
-            mBluetoothLeService.connect(address);
-        } else {
-            Log.i(TAG, "Service is null FAILURE");
-        }
-    }
-
-    public void startScan() {
-        Log.i(TAG, "Starting scan");
-//        ScanSettings settings = new ScanSettings.Builder()
-//                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-//                .setReportDelay(1)
-//                .build();
-
-//        ScanFilter scanFilter = new ScanFilter.Builder()
-//                .setServiceUuid(ParcelUuid.fromString(GattAttributes.SERVICE_UUID)).build();
         mBLEScanner.startScan(mScanCallback);
+        Log.i(TAG, "Starting scan");
     }
 
     public boolean isBluetoothAdapterEnabled() {
@@ -156,7 +160,9 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     public void disconnect() {
-        mActivity.unbindService(mServiceConnection);
-        mBluetoothLeService = null;
+        if (mServiceConnection != null) {
+            mActivity.unbindService(mServiceConnection);
+            mBluetoothLeService = null;
+        }
     }
 }
