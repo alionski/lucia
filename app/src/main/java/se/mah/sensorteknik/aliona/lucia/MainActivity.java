@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
                     mController.startScan();
                 }
             } else {
-                Toast.makeText(this, "You didn't give permission to access device location", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.permission_denied, Toast.LENGTH_LONG).show();
             }
         }
     }

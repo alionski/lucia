@@ -21,5 +21,8 @@
     proximity sensor is detecting an object. The interval between beeps will be shorter as the distance
     to the object decreases. Turn this function off and on with the button in the bottom right corner
     of the main screen.</string>
+    <string name="permission_denied">You didn\'t give permission to access device location.</string>
+    <string name="dark_alert">It is dark outside. You might want to switch on the lights.</string>
+    <string name="light_alert">It is bright outside. You might want to switch off the lights.</string>
 
 </resources>
