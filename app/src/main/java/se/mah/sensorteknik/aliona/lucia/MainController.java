@@ -41,6 +41,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             mBluetoothLeService = ((ArduinoService.LocalBinder) service).getService();
+            initBluetooth();
         }
 
         @Override
@@ -64,8 +65,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     public void onFragmentInteraction(int command) {
         switch (command) {
             case MainFragment.TOGGLE_LEDS:
-                ledsOn = !ledsOn;
-                ledsOn = mBluetoothLeService.ledsOnOff(ledsOn);
+                ledsOn = mBluetoothLeService.ledsOnOff(!ledsOn);
                 break;
             case MainFragment.TOGGLE_BEEPING:
                 beepingOn = !beepingOn;

@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Binder;
-import android.os.Handler;
 import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
@@ -50,12 +49,11 @@ public class ArduinoService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
-    private Handler handler = new Handler();
+    private Thread mPhotocellThread;
+    private Thread mBeeperThread;
     private ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC , ToneGenerator.MAX_VOLUME);
     private TextToSpeech mTTS;
-    private boolean beeping = false;
     private boolean beepingOn = false;
-    private boolean ledsControlOn = true;
     private boolean darkOutside = false;
     private boolean ledsOn = false;
     private OnTextToSpeechListener onTextToSpeechListener = new OnTextToSpeechListener();
@@ -73,6 +71,7 @@ public class ArduinoService extends Service {
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i(TAG, "Disconnected from GATT server.");
+                connect(mBluetoothAdapter, mBluetoothDeviceAddress); // RETRY!!!!!!!!!!!!!!!!
             }
         }
 
@@ -111,8 +110,10 @@ public class ArduinoService extends Service {
                         .getService(SERVICE_UUID)
                         .getCharacteristic(PROXIMITY_CHARACTERISTICS_UUID);
                 gatt.readCharacteristic(characteristic);
-                Thread thread = new Thread( new PhotocellReader(gatt));
-                thread.start();
+                mPhotocellThread = new PhotocellReader(gatt);
+                mPhotocellThread.start();
+                mBeeperThread = new Beeper();
+                mBeeperThread.start();
             }
             if (DESCRIPTOR_PHOTOCELL_UUID.equals(descriptor.getCharacteristic().getUuid())) {
                 Log.d(TAG, "DESCRIPTOR PHOTOCELL WRITE");
@@ -149,7 +150,7 @@ public class ArduinoService extends Service {
             Log.d(TAG, "PROXIMITY VALUE: " + dataInt);
             if (dataInt != 0) {
                 if(beepingOn) {
-                    playProximityBeep(dataInt);
+                    ((Beeper)mBeeperThread).setInterval(dataInt*10);
                 }
             }
         } else if (characteristic.getUuid().equals(PHOTOCELL_CHARACTERISTIC_UUID)) {
@@ -175,16 +176,6 @@ public class ArduinoService extends Service {
         return mBinder;
     }
 
-    @Override
-    public boolean onUnbind(Intent intent) {
-        // After using a given device, you should make sure that BluetoothGatt.close() is called
-        // such that resources are cleaned up properly.  In this particular example, close() is
-        // invoked when the UI is disconnected from the Service.
-        disconnect();
-        close();
-        return super.onUnbind(intent);
-    }
-
     /**
      * Called only when the photocell voltage array is full and we can calculate the current average
      * and decide whether there's need to switch on LEDs.
@@ -197,10 +188,8 @@ public class ArduinoService extends Service {
         int average = sum / brightnessSamples.length;
         Log.i(TAG, "PHOTOCELL AVERAGE: " + average);
         if (average < BRIGHTNESS_THRESHOLD) {
-            if (ledsControlOn) {
-                if (!darkOutside) {
-                    brightnessChanged(DARK);
-                }
+            if (!darkOutside) {
+                brightnessChanged(DARK);
             }
             darkOutside = DARK;
         } else {
@@ -219,6 +208,7 @@ public class ArduinoService extends Service {
      */
     private void brightnessChanged(boolean brightness) {
         if (brightness == DARK && !ledsOn) {
+            Log.d(TAG, "PHOTOCELL SAY IT'S DARK");
                 mTTS = new TextToSpeech(this,
                         new TextToSpeech.OnInitListener() {
                             @Override
@@ -242,6 +232,7 @@ public class ArduinoService extends Service {
                 mTTS.setOnUtteranceProgressListener(onTextToSpeechListener);
                 mTTS.setSpeechRate(0.5f);
         } else if (brightness == BRIGHT && ledsOn) {
+            Log.d(TAG, "PHOTOCELL SAY IT'S BRIGHT");
             mTTS = new TextToSpeech(this,
                     new TextToSpeech.OnInitListener() {
                         @Override
@@ -305,19 +296,21 @@ public class ArduinoService extends Service {
      * @param on True or false for on or off.
      */
     public boolean ledsOnOff(boolean on) {
-        ledsControlOn = on;
         if (on) {
             if (darkOutside) {
                 writeLEDCharacteristic(ON);
                 ledsOn = true;
+                Log.d(TAG, "PHOTOCELL Leds ON");
                 return true;
             } else {
                 ledsOn = false;
+                Log.d(TAG, "PHOTOCELL Leds OFF");
                 return false;
             }
         } else {
             writeLEDCharacteristic(OFF);
             ledsOn = false;
+            Log.d(TAG, "PHOTOCELL Leds OFF");
             return false;
         }
     }
@@ -361,32 +354,6 @@ public class ArduinoService extends Service {
         do {
             success = mBluetoothGatt.writeCharacteristic(writeCharacteristic);
         } while (!success);
-    }
-
-    /**
-     * Disconnects an existing connection or cancel a pending connection. The disconnection result
-     * is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     * callback.
-     */
-    public void disconnect() {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return;
-        }
-        mBluetoothGatt.disconnect();
-    }
-
-    /**
-     * After using a given BLE device, the app must call this method to ensure resources are
-     * released properly.
-     */
-    public void close() {
-        if (mBluetoothGatt == null) {
-            return;
-        }
-        mBluetoothGatt.close();
-        mBluetoothGatt = null;
     }
 
     /**
@@ -444,31 +411,6 @@ public class ArduinoService extends Service {
         } while (!success);
     }
 
-    /**
-     * Plays a sound representing some proximity detected by the BLE device.
-     * Plays a beep as long as one is already not playing.
-     * The distance input determines the sleep after the beep.
-     * @param distance Distance value from sensor
-     */
-    private void playProximityBeep(int distance) {
-        if(!beeping) {
-            beeping = true;
-            final long interval = distance * 10;
-            handler.post(new Runnable() {
-                public void run() {
-                    Log.d(TAG, "Beeping");
-                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 250);
-                    try {
-                        Thread.sleep(interval);
-                        beeping = false;
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
-    }
-
     private class OnTextToSpeechListener extends UtteranceProgressListener {
 
         @Override
@@ -484,8 +426,10 @@ public class ArduinoService extends Service {
         public void onError(String utteranceId) {}
     }
 
-    private class PhotocellReader implements Runnable {
+
+    private class PhotocellReader extends Thread {
         private BluetoothGatt gatt;
+        private volatile boolean isRunning = true;
 
         public PhotocellReader(BluetoothGatt gatt) {
             this.gatt = gatt;
@@ -493,17 +437,105 @@ public class ArduinoService extends Service {
 
         @Override
         public void run() {
-            while(true) {
+            while(isRunning) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                BluetoothGattCharacteristic characteristic = gatt
-                        .getService(SERVICE_UUID)
-                        .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
-                gatt.readCharacteristic(characteristic);
+                if (gatt != null) {
+                    BluetoothGattCharacteristic characteristic = gatt
+                            .getService(SERVICE_UUID)
+                            .getCharacteristic(PHOTOCELL_CHARACTERISTIC_UUID);
+                    gatt.readCharacteristic(characteristic);
+                }
             }
+        }
+
+        public void killThread() {
+            isRunning = false;
+        }
+    }
+
+    private class Beeper extends Thread{
+        private int interval;
+        private boolean beeping = true;
+        private long lastTime;
+        private volatile boolean isRunning = true;
+
+        @Override
+        public void run() {
+            while(isRunning) {
+                if(beepingOn) {
+                    long time = System.currentTimeMillis();
+                    if (time - lastTime >= interval) {
+                        lastTime = time;
+                        if (beeping) {
+                            toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT);
+                            beeping = false;
+                        } else {
+                            toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT);
+                            beeping = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void setInterval(int interval) {
+            this.interval = interval;
+        }
+
+        public void killThread() {
+            isRunning = false;
+        }
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        // After using a given device, you should make sure that BluetoothGatt.close() is called
+        // such that resources are cleaned up properly.  In this particular example, close() is
+        // invoked when the UI is disconnected from the Service.
+        disconnect();
+        close();
+        return super.onUnbind(intent);
+    }
+
+
+    /**
+     * Disconnects an existing connection or cancel a pending connection. The disconnection result
+     * is reported asynchronously through the
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
+     * callback.
+     */
+    public void disconnect() {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        mBluetoothGatt.disconnect();
+    }
+
+    /**
+     * After using a given BLE device, the app must call this method to ensure resources are
+     * released properly.
+     */
+    public void close() {
+        if (mBluetoothGatt == null) {
+            return;
+        }
+        mBluetoothGatt.close();
+        mBluetoothGatt = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mBeeperThread != null) {
+            ((Beeper) mBeeperThread).killThread();
+        }
+        if (mPhotocellThread != null) {
+            ((PhotocellReader) mPhotocellThread).killThread();
         }
     }
 }

@@ -25,12 +25,6 @@ public class MainActivity extends AppCompatActivity {
         // The service is bound by the controller in its constructor, so I removed the binding here
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mController.initBluetooth();
-    }
-
     private void initUI() {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();
