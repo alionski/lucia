@@ -1,41 +1,48 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
     tools:context="se.mah.sensorteknik.aliona.lucia.InformationFragment"
+    android:layout_height="wrap_content"
     android:focusable="true">
 
-    <TextView
-        android:id="@+id/tvInfoContent"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/info_content"
-        android:padding="20dp"
-        android:textSize="32sp" />
+        android:focusable="true">
 
-    <TextView
-        android:id="@+id/tvInfoProximity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="32sp"
-        android:padding="20dp"
-        android:text="@string/info_proximity" />
+        <TextView
+            android:id="@+id/tvInfoContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/info_content"
+            android:padding="20dp"
+            android:textSize="32sp" />
 
-    <TextView
-        android:id="@+id/tvInfoLeds"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="32sp"
-        android:padding="20dp"
-        android:text="@string/info_leds" />
+        <TextView
+            android:id="@+id/tvInfoProximity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="32sp"
+            android:padding="20dp"
+            android:text="@string/info_proximity" />
 
-    <TextView
-        android:id="@+id/tvInfoSound"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="32sp"
-        android:padding="20dp"
-        android:text="@string/info_sound" />
+        <TextView
+            android:id="@+id/tvInfoLeds"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="32sp"
+            android:padding="20dp"
+            android:text="@string/info_leds" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/tvInfoSound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="32sp"
+            android:padding="20dp"
+            android:text="@string/info_sound" />
+
+    </LinearLayout>
+</ScrollView>

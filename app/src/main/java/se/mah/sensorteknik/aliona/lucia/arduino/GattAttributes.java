@@ -1,7 +1,7 @@
 package se.mah.sensorteknik.aliona.lucia.arduino;
 
 /**
- * Created by aliona on 2018-03-02.
+ * Static values for Arduino UUID characteristics. Used in the service.
  */
 
 public class GattAttributes {

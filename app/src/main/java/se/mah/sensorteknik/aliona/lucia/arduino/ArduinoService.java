@@ -21,7 +21,9 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Created by aliona on 2018-02-27.
+ *
+ * The app's service responsible for communicating with the Arduino device and controlling the device from the main controller,
+ * and by extension the MainActivity and the frgment's UI.
  * http://nilhcem.com/android-things/bluetooth-low-energy
  * https://github.com/googlesamples/android-BluetoothLeGatt/blob/master/Application/src/main/java/com/example/android/bluetoothlegatt/BluetoothLeService.java
  *
@@ -59,7 +61,9 @@ public class ArduinoService extends Service {
     private OnTextToSpeechListener onTextToSpeechListener = new OnTextToSpeechListener();
     private int[] brightnessSamples = new int[10];
     private int index = 0;
-
+    /**
+     * The callback for the bluetooth connection. Receives updates and delegates decisions to other service methos.
+     */
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -143,6 +147,10 @@ public class ArduinoService extends Service {
     };
 
 
+    /**
+     * Processes the data received from the Arduino. Called from onCharacteristicRead().
+     * @param characteristic
+     */
     private void manageResults(final BluetoothGattCharacteristic characteristic) {
         Log.d(TAG, "CHAR UUID"+characteristic.getUuid());
         if (characteristic.getUuid().equals(PROXIMITY_CHARACTERISTICS_UUID)) {
@@ -165,12 +173,20 @@ public class ArduinoService extends Service {
         }
     }
 
+    /**
+     * Standard bound service method.
+     */
     public class LocalBinder extends Binder {
         public ArduinoService getService() {
             return ArduinoService.this;
         }
     }
 
+    /**
+     * Standard bound service method.
+     * @param intent
+     * @return
+     */
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
@@ -204,7 +220,7 @@ public class ArduinoService extends Service {
     /**
      * Method called from calulateBrightness() is the new average of light values is different from the current -->
      * the user might want switch on or off the lights.
-     * @param brightness
+     * @param brightness -- whether it has become dark (true) or bright (false).
      */
     private void brightnessChanged(boolean brightness) {
         if (brightness == DARK && !ledsOn) {
@@ -260,9 +276,10 @@ public class ArduinoService extends Service {
 
     /**
      * Called when the BLE device has been found and the address is known from MainController.
-     * @param adapter
-     * @param address
-     * @return
+     * Established the connection with the Arduino device.
+     * @param adapter -- the Bluetooth adapter.
+     * @param address -- the device address to connect to.
+     * @return -- return true is the connection can be successfully established.
      */
     public boolean connect(BluetoothAdapter adapter, final String address) {
         mBluetoothAdapter = adapter;
@@ -293,7 +310,7 @@ public class ArduinoService extends Service {
 
     /**
      * Turns on or off the leds on the Arduino device.
-     * @param on True or false for on or off.
+     * @param on -- whether it should be switched on or off
      */
     public boolean ledsOnOff(boolean on) {
         if (on) {
@@ -317,7 +334,7 @@ public class ArduinoService extends Service {
 
     /**
      * Turns on or off the proximity sensor on the Arduino device.
-     * @param isOn True or false for on or off.
+     * @param isOn -- whether it should be switched on or off
      */
     public void proximityOnOff(boolean isOn) {
         if(isOn) {
@@ -329,13 +346,17 @@ public class ArduinoService extends Service {
 
     /**
      * Turns on or off the beeping sound, when objects are near, on the Android device.
-     * @param isOn true or false for on or off.
+     * @param isOn -- whether it should be switched on or off
      */
     public void beepingOnOff(boolean isOn) {
         beepingOn = isOn;
         switchBzzzzz(isOn ? 0 : 1); // if beeping is on, then switch vibration off, and vice versa
     }
 
+    /**
+     * Instructs the Arduino to switch on or off the vibration motor.
+     * @param isOn -- whether it should be switched on or off
+     */
     private void switchBzzzzz(int isOn) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
@@ -357,10 +378,7 @@ public class ArduinoService extends Service {
     }
 
     /**
-     * Request a read on a given {@code BluetoothGattCharacteristic}. The read result is reported
-     * asynchronously through the {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
-     * callback.
-     *
+     * Called when there is a new characteristic from the Arduino to read.
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
@@ -371,6 +389,10 @@ public class ArduinoService extends Service {
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
+    /**
+     * Instructs the Arduino to switch on or off readings from the proximity sensor.
+     * @param onOff
+     */
     private void writeProximityCharacteristic(int onOff) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
@@ -391,6 +413,10 @@ public class ArduinoService extends Service {
         } while (!success);
     }
 
+    /**
+     * Instructs the Arduino to switch on or off the LED.
+     * @param onOff
+     */
     private void writeLEDCharacteristic(int onOff) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
@@ -411,6 +437,10 @@ public class ArduinoService extends Service {
         } while (!success);
     }
 
+    /**
+     * Callback fot the TextToSpeech object (the one that says when it's dark or bright).
+     * Stops and closes the utterance, i.e. cleans up.
+     */
     private class OnTextToSpeechListener extends UtteranceProgressListener {
 
         @Override
@@ -426,7 +456,10 @@ public class ArduinoService extends Service {
         public void onError(String utteranceId) {}
     }
 
-
+    /**
+     * Thread that is responsible for continuously reading the photocell data.
+     * The control is then passed on to the GattCallback.
+     */
     private class PhotocellReader extends Thread {
         private BluetoothGatt gatt;
         private volatile boolean isRunning = true;
@@ -457,6 +490,10 @@ public class ArduinoService extends Service {
         }
     }
 
+    /**
+     * Thread that is responsible for making the beeping sounds when there are objects withing 2 meters from the user.
+     * Only makes sounds if the sensor and the sounds option are on. Started when the app connects to the device.
+     */
     private class Beeper extends Thread{
         private int interval;
         private boolean beeping = true;
@@ -491,11 +528,14 @@ public class ArduinoService extends Service {
         }
     }
 
+    /**
+     * Called from MainController's disconnect() after MainActivity's onDestroy().
+     * Disconnects from the Arduino device and closes the connection.
+     * @param intent
+     * @return
+     */
     @Override
     public boolean onUnbind(Intent intent) {
-        // After using a given device, you should make sure that BluetoothGatt.close() is called
-        // such that resources are cleaned up properly.  In this particular example, close() is
-        // invoked when the UI is disconnected from the Service.
         disconnect();
         close();
         return super.onUnbind(intent);
@@ -503,10 +543,8 @@ public class ArduinoService extends Service {
 
 
     /**
-     * Disconnects an existing connection or cancel a pending connection. The disconnection result
-     * is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     * callback.
+     * Disconnects an existing connection to the Arduino device.
+     * Called from MainControllers's disconnect() via onUnbind().
      */
     public void disconnect() {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
@@ -517,8 +555,8 @@ public class ArduinoService extends Service {
     }
 
     /**
-     * After using a given BLE device, the app must call this method to ensure resources are
-     * released properly.
+     * After using a given BLE device, the app calls this method to ensure resources are
+     * released properly. Called from MainControllers's disconnect() via onUnbind().
      */
     public void close() {
         if (mBluetoothGatt == null) {
@@ -528,6 +566,10 @@ public class ArduinoService extends Service {
         mBluetoothGatt = null;
     }
 
+    /**
+     * Called when the activity unbinds the service, after the service calls stopSelf().
+     * Stops the threads to exit gracefully.
+     */
     @Override
     public void onDestroy() {
         super.onDestroy();

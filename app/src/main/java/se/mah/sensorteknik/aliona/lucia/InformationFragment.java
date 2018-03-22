@@ -26,6 +26,13 @@ public class InformationFragment extends Fragment {
         return new InformationFragment();
     }
 
+    /**
+     * Standard method. Inflates and return the view of this fragment.
+     * @param inflater -- standard param.
+     * @param container -- MainActivity's container
+     * @param savedInstanceState -- saved state, if the fragment was saved before
+     * @return -- inflated view of this fragment
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_information, container, false);

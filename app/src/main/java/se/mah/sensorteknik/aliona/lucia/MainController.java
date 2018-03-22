@@ -19,7 +19,11 @@ import android.widget.Toast;
 import se.mah.sensorteknik.aliona.lucia.arduino.ArduinoService;
 
 /**
- * Created by aliona on 2018-02-27.
+ *
+ * The Main Controller, which is created once, when the MainActivity is created.
+ * it first starts the service, then initialises bluetooth and scans for Arduino devices.
+ * Once it has found Lucia, it tells the service to connect, after which all communication with Arduino
+ * is handled by the service.
  */
 
 public class MainController implements MainFragment.OnFragmentInteractionListener {
@@ -38,10 +42,16 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     private boolean beepingOn = false;
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
+        /**
+         * Called when the service is ready and binds to the activity.
+         * After that, we can safely initialise the bluetooth and start the scan.
+         * @param componentName -- unused
+         * @param service -- reference to the ArduinoService
+         */
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             mBluetoothLeService = ((ArduinoService.LocalBinder) service).getService();
-            initBluetooth();
+            initBluetooth(); // init bluetooth only after the service is ready
         }
 
         @Override
@@ -50,6 +60,10 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         }
     };
 
+    /**
+     * Constructor. Binds the service.
+     * @param activity -- reference to the MainActivity.
+     */
     public MainController(MainActivity activity) {
         mActivity = activity;
         Intent gattServiceIntent = new Intent(mActivity, ArduinoService.class);
@@ -59,7 +73,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     /**
      * Checks which button has been pressed in the MainFragment, and acts
      * accordingly.
-     * @param command
+     * @param command -- the command associated with the button pressed.
      */
     @Override
     public void onFragmentInteraction(int command) {
@@ -108,6 +122,7 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
 
     /**
      * Called either from here or MainActivity after BT is switched on.
+     * Checks if the app has all the needed permissions.
      */
     public void checkLocationAndScan() {
         if (ContextCompat.checkSelfPermission(mActivity,
@@ -120,7 +135,8 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     /**
-     * Called from startScan()
+     * Called from startScan(). After this method is called, the service controls all communication with
+     * the Arduino.
      */
     private void connectServiceToArduino() {
         if (mBluetoothLeService != null) {
@@ -132,6 +148,8 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     /**
+     * Starts scanning for available BT devices, only looking for Lucia.
+     * Quits after it's found it, and instructs the service to connect to the Lucia device.
      * Called either from checkLocationAndScan() or MainActivity after the user gave permission to use location.
      */
     public void startScan() {
@@ -155,10 +173,17 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
         Log.i(TAG, "Starting scan");
     }
 
+    /**
+     * Called from MainActivity after it receives the results of the locations permission request activity.
+     * @return true if BT is enabled, false otherwise
+     */
     public boolean isBluetoothAdapterEnabled() {
         return mBluetoothAdapter.isEnabled();
     }
 
+    /**
+     * Called from MainActivity just before the app dies.
+     */
     public void disconnect() {
         if (mServiceConnection != null) {
             mActivity.unbindService(mServiceConnection);

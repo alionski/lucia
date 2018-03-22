@@ -11,15 +11,19 @@
     <string name="function_off">This function is currently off.</string>
     <string name="info_content">Information about the different functions of this application.</string>
     <string name="info_proximity">The proximity sensor will detect objects appearing in front of the
-    sensor attached to the staff. The sensor will give feedback in the shape of sound and vibration
+    sensor attached to the cane. The sensor will give feedback in the form of sound or vibration if
     something is detected. Turn the sensor off and on with the button in the top left corner of the
     main screen.</string>
-    <string name="info_leds">The light emitting diodes attached to the staff can be turned off and on
+    <string name="info_leds">The light emitting diodes attached to the cane can be turned off and on
     which will make it visible in the dark. Turn this function off and on with the button in the top
-    right corner of the main screen.</string>
+    right corner of the main screen. The application will also notify you when it gets dark so that
+    you know that you might need to switch on the lights. If the lights are
+    on, it will also notify you when it gets bright, so that you know when to switch off the lights in order
+    to save battery. </string>
     <string name="info_sound">A beeping sound can be emitted from the phone, indicating when the
     proximity sensor is detecting an object. The interval between beeps will be shorter as the distance
     to the object decreases. Turn this function off and on with the button in the bottom right corner
-    of the main screen.</string>
-
+    of the main screen. When turned off, the feedback will come in the form of vibration, which you will
+    sense on the handle of the cane. As with sound, the closer an object, the shorter the vibration
+    intervals, and vice versa.</string>
 </resources>
