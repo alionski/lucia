@@ -148,6 +148,10 @@ public class MainController implements MainFragment.OnFragmentInteractionListene
     }
 
     /**
+     * Doobiedoo
+     */
+
+    /**
      * Starts scanning for available BT devices, only looking for Lucia.
      * Quits after it's found it, and instructs the service to connect to the Lucia device.
      * Called either from checkLocationAndScan() or MainActivity after the user gave permission to use location.
